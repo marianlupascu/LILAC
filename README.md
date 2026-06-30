@@ -44,16 +44,11 @@ configurations:
   scene as context and activates only that concept's adapter.
 - **Decomposition** — a generated/natural scene is split into RGBA layers by
   Qwen-Image-Layered; each person layer is re-rendered with its concept adapter
-  and alpha-composited back. This inherits any error in the layer split, so it
-  preserves identity less reliably than scaffold.
+  and alpha-composited back.
 
-Because exactly **one adapter is active per pass**, the cross-concept crosstalk
-χ_ij = ‖ΔWᵢᵀΔWⱼ‖_F is never instantiated. Independently trained adapters are in
-fact *not* orthogonal (mean pairwise residual overlap 0.106, 5.3× the 0.020
-chance level), so weight-merging methods must actively suppress χ_ij; LILAC
-removes it structurally. The baseline **OrthA** instead trains LoRAs in mutually
-orthogonal column subspaces and *sums* their weight deltas for a single forward
-pass.
+The baseline **OrthA** instead trains LoRAs in mutually orthogonal column
+subspaces and *sums* their weight deltas for a single forward pass. See the paper
+for the full method, analysis, and proofs.
 
 ```mermaid
 flowchart LR
@@ -70,20 +65,13 @@ flowchart LR
 
 ![Cascaded inference — scaffold configuration](figures/fig2V3.png)
 
-*Scaffold configuration.* Given an image (natural or generated), each concept is
-added in its own pass with only its adapter active, conditioned on the frozen
-image of the concepts placed so far. No two adapters are active together; earlier
-concepts and the background are preserved as later ones are added. The final pass
-adds a non-person concept (sunglasses), showing the procedure composes objects
-and attributes as well as identities.
+*Scaffold:* each concept is added in its own pass (only its adapter active),
+conditioned on the frozen composite so far.
 
 ![Decomposition configuration](figures/fig3V2.png)
 
-*Decomposition configuration.* The input image is split into RGBA layers (a
-background and subject layers); each subject is regenerated in its own pass with
-its adapter active, then recombined. Because the per-subject layers come from a
-layer split rather than a direct edit, this route inherits any error in the split
-and preserves identity less reliably than scaffold.
+*Decomposition:* the scene is split into RGBA layers, each subject layer
+re-rendered with its adapter and recomposited.
 
 ---
 
@@ -111,74 +99,18 @@ single-to-multi composition gap. Metrics: **Text** = CLIPScore vs. joint prompt,
 | **LILAC (scaffold)** | none | 0.754 | 0.711 | −0.043 | 0.746 | 0.738 | −0.008 | 0.961 | **0.861** | −0.100 |
 | **LILAC (LaDe, native layered)** | none | 0.759 | **0.758** | −0.001 | 0.761 | **0.745** | −0.016 | 0.879 | **0.877** | −0.002 |
 
-Top-block baseline numbers are quoted from the SDXL results of Orthogonal
-Adaptation; absolute values are comparable in scale but indicative across
-backbones. LILAC reaches the two highest identity scores in the table
-(**0.861** scaffold, **0.877** native layered) and, on the layered backbone,
-stays essentially flat from single to multi (ΔID −0.002): adding a subject adds
-a pass, not a cross term.
-
-**Same-backbone control.** Run on Qwen-Image-Edit — the backbone LILAC uses —
-Orthogonal Adaptation collapses at three subjects to an ArcFace detection rate of
-**0.000** (ΔID −0.929), versus **0.861** for LILAC scaffold. The failure is
-specific to identity: image alignment even *rises* (IA 0.869). The orthogonal
-increments act jointly over the full transformer token sequence rather than over
-disjoint spatial regions, yielding plausible but blended faces — CLIP-based IA
-still scores them as the right kind of person, while ArcFace rejects each as a
-biometric match. This is the parameter-level interference LILAC removes by
-construction, and it shows IA alone is misleading while identity exposes the
-merge failure.
+Baseline numbers (top block) are quoted from the SDXL results of Orthogonal
+Adaptation. LILAC reaches the highest identity scores (**0.861** scaffold,
+**0.877** native layered). On the **same backbone** (Qwen-Image-Edit), Orthogonal
+Adaptation collapses to **0.000** ArcFace identity at three subjects while image
+alignment stays high — its orthogonal sums yield plausible but blended faces,
+the parameter-level interference LILAC removes by construction. Full analysis,
+ablations, and scalability are in the paper.
 
 ![Qualitative multi-subject comparison](figures/fig4.png)
 
-*Qualitative comparison.* Each pair of rows shows Orthogonal Adaptation (top) and
-LILAC scaffold (bottom) on the same prompt. Groups vary in size and combine real
-public figures, stylized fictional characters, animals, and accessories, placed
-in diverse scene contexts. LILAC preserves each identity and keeps the subjects
-distinct, with consistent lighting and plausible arrangement.
-
-### Subject-ordering ablation
-
-Eight fixed three-subject groups composed under three orderings (scaffold
-configuration). The default orders subjects by descending LoRA Frobenius norm
-‖ΔW‖_F (anchor first). All orderings fall within a narrow band, so the method is
-largely robust to composition order; placing the strongest adapter first is a
-sound default.
-
-| Ordering | Identity | Image | Text |
-|---|:--:|:--:|:--:|
-| Random | **0.850** | **0.766** | 0.687 |
-| Anchor-last (ascending) | 0.822 | 0.730 | 0.709 |
-| Anchor-first (descending, ours) | **0.850** | 0.723 | **0.714** |
-
-### Cross-concept overlap and scalability
-
-<p align="center">
-  <img src="figures/crosstalk_persons.png" width="48%" alt="Cross-concept overlap" />
-  <img src="figures/scalability.png" width="48%" alt="Scalability vs. number of subjects" />
-</p>
-
-*Left — cross-concept overlap.* Each cell is the normalised overlap between the
-LoRA residuals of two concepts (1 on the diagonal; 0 for orthogonal residuals).
-Off-diagonal values average **0.106**, 5.3× the 0.020 chance level for random
-adapters of the same size: independently trained adapters are *not* orthogonal.
-This is the crosstalk χ_ij that weight-space fusion must suppress and that
-per-layer binding never instantiates.
-
-*Right — scalability.* Per-subject quality vs. the number of subjects N (scaffold).
-Concept fidelity (CLIP-I) and text alignment (CLIP-T) stay flat as N grows, while
-the ArcFace detection rate is lower and noisier at larger N — reflecting scene
-crowding and smaller faces rather than identity blending, which the per-concept
-binding removes by construction.
-
-### Single-concept renderings under a strong style
-
-![Single-concept stylized renderings](figures/img3.png)
-
-*Stylized single-concept renderings* (Cyberpunk 2077 style) for three concepts:
-input references (top) versus Orthogonal Adaptation and LILAC. A pronounced style
-stresses identity preservation because the style competes with each subject's
-appearance.
+*Orthogonal Adaptation (top rows) vs. LILAC scaffold (bottom rows) on the same
+prompts.*
 
 ---
 
