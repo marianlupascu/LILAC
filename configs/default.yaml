@@ -1,0 +1,86 @@
+# ============================================================
+# Multi-Concept Image Generation - Default Config
+# Layer-based Approach with Qwen-Image-Layered
+# ============================================================
+
+# --- Model ---
+model:
+  base_model: "Qwen/Qwen-Image-Edit"        # Edit model for LoRA training
+  layered_model: "Qwen/Qwen-Image-Layered"  # For decomposition
+  t2i_model: "Qwen/Qwen-Image"              # For text-to-image generation
+  captioner: "Qwen/Qwen2.5-VL-7B-Instruct"  # VLM for captioning
+
+# --- Concepts ---
+concepts:
+  - name: "trump"
+    trigger_token: "ohwx"
+    dataset_dir: "Datasets/S1"
+    metadata: "Datasets/S1/metadata.jsonl"
+    lora_output: "outputs/lora_weights/trump_lora"
+
+  - name: "pope"
+    trigger_token: "ohwx"
+    dataset_dir: "Datasets/S2"
+    metadata: "Datasets/S2/metadata.jsonl"
+    lora_output: "outputs/lora_weights/pope_lora"
+
+# --- LoRA Training ---
+training:
+  rank: 64
+  lora_alpha: 64
+  learning_rate: 1e-4
+  max_train_steps: 1000
+  train_batch_size: 1
+  gradient_accumulation_steps: 4
+  lr_scheduler: "constant_with_warmup"
+  lr_warmup_steps: 100
+  resolution: 512
+  mixed_precision: "bf16"
+  gradient_checkpointing: true
+  use_8bit_adam: true
+  seed: 42
+  repeats: 10                      # Repeat dataset N times per epoch
+  checkpointing_steps: 250
+
+  target_modules:
+    - "to_q"
+    - "to_k"
+    - "to_v"
+    - "to_out.0"
+    - "add_q_proj"
+    - "add_k_proj"
+    - "add_v_proj"
+    - "to_add_out"
+
+# --- Captioning ---
+captioning:
+  captioner: "qwen"                # "qwen" or "blip2"
+  max_caption_length: 300
+  temperature: 0.7
+
+# --- Inference ---
+inference:
+  num_inference_steps: 50
+  true_cfg_scale: 4.0
+  negative_prompt: " "
+  resolution: 512
+  num_images: 4
+
+# --- Layer Decomposition ---
+decomposition:
+  layers: 3
+  cfg_scale: 6.0
+  seeds: [0, 1, 42, 123, 456, 777, 1234, 2025]
+  resolution: 640
+  separation_score_threshold: 0.6
+
+# --- Evaluation ---
+evaluation:
+  clip_model: "ViT-L-14"
+  clip_pretrained: "openai"
+  metrics:
+    - "clip_image_similarity"
+    - "concept_disentanglement"
+    - "layer_coherence"
+    - "inference_time"
+    - "memory_usage"

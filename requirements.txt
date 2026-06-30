@@ -1,0 +1,32 @@
+# LILAC — Python dependencies
+# Install with: pip install -r requirements.txt
+# (or use scripts/setup_env.sh, which also installs a CUDA torch build)
+
+# --- Core diffusion stack (Qwen-Image-Edit) ---
+# diffusers >= 0.38 ships QwenImagePipeline + QwenImageEditPipeline.
+# transformers >= 4.49 registers Qwen2_5_VLForConditionalGeneration.
+torch
+torchvision
+diffusers>=0.38
+transformers>=4.49
+accelerate>=0.30
+
+# --- LoRA / DoRA fine-tuning ---
+peft>=0.10
+bitsandbytes          # optional: 8-bit Adam (falls back to AdamW if missing)
+safetensors
+
+# --- Captioning ---
+qwen-vl-utils
+
+# --- Evaluation metrics ---
+open_clip_torch       # CLIP for TA / IA
+insightface           # ArcFace for the ID metric
+onnxruntime           # ArcFace backend (use onnxruntime-gpu for CUDA)
+
+# --- Utilities ---
+numpy
+pandas
+matplotlib
+Pillow
+tqdm

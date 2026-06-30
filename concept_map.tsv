@@ -1,0 +1,24 @@
+# dataset	concept	type	trigger_token	has_images
+# Fill every concept marked TODO with the real concept name (e.g. 'cat', 'watch', 'einstein') and type with one of person|animal|object. Rows with has_images=0 are skipped by the recaptioner. Lines starting with # are ignored.
+# type may be person|man|woman|animal|object  (man/woman imply person + gender)
+Datasets/S1	trump	man	ohwx	17
+Datasets/S2	pope	man	ohwx	17
+Datasets/S3	thor	man	ohwx	16
+Datasets/S4	swift	woman	ohwx	16
+Datasets/S5	messi	man	ohwx	17
+Datasets/S6	dog	animal	ohwx	16
+Datasets/S7	dachshund	animal	ohwx	16
+Datasets/S8	hulk	man	ohwx	10
+Datasets/S9	lebron	man	ohwx	15
+Datasets/S10	mystique	woman	ohwx	15
+Datasets/S11	chowchow	animal	ohwx	18
+Datasets/S12	thanos	man	ohwx	16
+Datasets/S13	harrypotter	man	ohwx	16
+Datasets/S14	bradpitt	man	ohwx	16
+Datasets/S15	gosling	man	ohwx	16
+Datasets/S16	corgi	animal	ohwx	16
+Datasets/S17	jamiefoxx	man	ohwx	17
+Datasets/S18	bordercollie	animal	ohwx	18
+Datasets/S19	bichon	animal	ohwx	16
+Datasets/S20	sunglasses	object	ohwx	18
+Datasets/S21	margotrobbie	woman	ohwx	18
